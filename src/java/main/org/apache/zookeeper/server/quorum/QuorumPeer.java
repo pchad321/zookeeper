@@ -636,9 +636,9 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         loadDataBase();
         // cnxnFactory默认使用NIOServerCnxnFactory，开始socket连接，并使用NIO进行数据交互
         cnxnFactory.start();
-        // 开始领导者选举(确定领导者选举算法)
+        // 开始领导者选举，确定服务器的角色，再针对不同的服务器角色进行初始化(确定领导者选举算法)
         startLeaderElection();
-        // 执行run()方法
+        // 执行本类中的run()方法(非常重要)
         super.start();
     }
 
@@ -711,7 +711,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     }
     synchronized public void startLeaderElection() {
     	try {
-    	    // 构建一个领导者投票，包括myid，zxid以及epoch值
+    	    // 生成投票并投给自己，包括myid，zxid以及epoch值
     		currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());
     	} catch(IOException e) {
     		RuntimeException re = new RuntimeException(e.getMessage());
@@ -831,10 +831,13 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             le = new AuthFastLeaderElection(this, true);
             break;
         case 3:
+            // 初始化负责各台服务器之间的底层leader选角过程中的网络通信
             qcm = createCnxnManager();
             QuorumCnxManager.Listener listener = qcm.listener;
             if(listener != null){
+                // 启动listener线程
                 listener.start();
+                // 默认使用快速领导者选举
                 le = new FastLeaderElection(this, qcm);
             } else {
                 LOG.error("Null listener when initializing cnx manager");
@@ -919,6 +922,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     // 还在进行选举，此时server的状态为looking
                     LOG.info("LOOKING");
 
+                    // 不关心只读服务器(可忽略)
                     if (Boolean.getBoolean("readonlymode.enabled")) {
                         LOG.info("Attempting to start ReadOnlyZooKeeperServer");
 
@@ -964,7 +968,9 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                         }
                     } else {
                         try {
+                            // 兼容性代码
                             setBCVote(null);
+                            // 查找leader(重要)
                             setCurrentVote(makeLEStrategy().lookForLeader());
                         } catch (Exception e) {
                             LOG.warn("Unexpected exception", e);

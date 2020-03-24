@@ -339,7 +339,7 @@ public class FastLeaderElection implements Election {
                             /*
                              * If this server is looking, then send proposed leader
                              */
-
+                            // 如果自己是looking状态，说明正在进行领导者选举
                             if(self.getPeerState() == QuorumPeer.ServerState.LOOKING){
                                 recvqueue.offer(n);
 
@@ -365,6 +365,8 @@ public class FastLeaderElection implements Election {
                                  * If this server is not looking, but the one that sent the ack
                                  * is looking, then send back what it believes to be the leader.
                                  */
+                                // 如果不是looking状态，说明自己可能是leader，也可能是follower
+                                // 此时就会将自己认为是leader的投票发出去
                                 Vote current = self.getCurrentVote();
                                 if(ackstate == QuorumPeer.ServerState.LOOKING){
                                     if(LOG.isDebugEnabled()){
@@ -465,7 +467,7 @@ public class FastLeaderElection implements Election {
          * @param manager   Connection manager
          */
         Messenger(QuorumCnxManager manager) {
-
+            // workersender会从sendqueue中获取数据
             this.ws = new WorkerSender(manager);
 
             Thread t = new Thread(this.ws,
@@ -536,6 +538,7 @@ public class FastLeaderElection implements Election {
         proposedLeader = -1;
         proposedZxid = -1;
 
+        // 创建两个队列
         sendqueue = new LinkedBlockingQueue<ToSend>();
         recvqueue = new LinkedBlockingQueue<Notification>();
         this.messenger = new Messenger(manager);
@@ -569,6 +572,7 @@ public class FastLeaderElection implements Election {
     /**
      * Send notifications to all peers upon a change in our vote
      */
+    // 给所有参与投票的服务器发送notification
     private void sendNotifications() {
         for (QuorumServer server : self.getVotingView().values()) {
             long sid = server.id;
@@ -799,6 +803,7 @@ public class FastLeaderElection implements Election {
            self.start_fle = Time.currentElapsedTime();
         }
         try {
+            // 每台服务器接收到的投票，即投票箱     其他服务器sid ---> 投票
             HashMap<Long, Vote> recvset = new HashMap<Long, Vote>();
 
             HashMap<Long, Vote> outofelection = new HashMap<Long, Vote>();
@@ -806,12 +811,15 @@ public class FastLeaderElection implements Election {
             int notTimeout = finalizeWait;
 
             synchronized(this){
+                // 时钟+1
                 logicalclock.incrementAndGet();
+                // 更新提议，包含(myid，lastZxid，epoch)，更新为自己
                 updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());
             }
 
             LOG.info("New election. My id =  " + self.getId() +
                     ", proposed zxid=0x" + Long.toHexString(proposedZxid));
+            // 启动时先投票给自己
             sendNotifications();
 
             /*

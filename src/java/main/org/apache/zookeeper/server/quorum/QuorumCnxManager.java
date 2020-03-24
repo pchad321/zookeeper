@@ -123,13 +123,17 @@ public class QuorumCnxManager {
     /*
      * Mapping from Peer to Thread number
      */
+    // 每台服务器对应的sendWorker，负责发送数据
     final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;
+    // 需要发送给各个服务器的消息队列
     final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;
+    // 发送给每台服务器最近的信息
     final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;
 
     /*
      * Reception queue
      */
+    // 本台服务器接收到的信息
     public final ArrayBlockingQueue<Message> recvQueue;
     /*
      * Object to synchronize access to recvQueue
@@ -423,12 +427,14 @@ public class QuorumCnxManager {
         }
     }
 
+    // 接收连接
     private void handleConnection(Socket sock, DataInputStream din)
             throws IOException {
         Long sid = null;
         try {
             // Read server id
             sid = din.readLong();
+            // 如果sid小于0或者server的角色是observer时，不进行投票选角
             if (sid < 0) { // this is not a server id but a protocol version (see ZOOKEEPER-1633)
                 sid = din.readLong();
 
@@ -467,6 +473,8 @@ public class QuorumCnxManager {
         authServer.authenticate(sock, din);
 
         //If wins the challenge, then close the new connection.
+        // 考虑到不需要两台服务器之间建立两台连接，所以当本机的sid大于对方的sid，那么本机就会去连接对方
+        // 即小的sid服务器是不允许去连接大的sid服务器
         if (sid < this.mySid) {
             /*
              * This replica might still believe that the connection to sid is
@@ -498,7 +506,8 @@ public class QuorumCnxManager {
             
             senderWorkerMap.put(sid, sw);
             queueSendMap.putIfAbsent(sid, new ArrayBlockingQueue<ByteBuffer>(SEND_CAPACITY));
-            
+
+            // 开启sendworker以及recvworker线程
             sw.start();
             rw.start();
             
@@ -516,6 +525,7 @@ public class QuorumCnxManager {
          */
         if (this.mySid == sid) {
              b.position(0);
+             // 如果是发送给自己，则不需要通过网络，直接转换成message并加入到recvQueue中即可
              addToRecvQueue(new Message(b.duplicate(), sid));
             /*
              * Otherwise send to the corresponding thread to send.
@@ -524,6 +534,7 @@ public class QuorumCnxManager {
              /*
               * Start a new connection if doesn't have one already.
               */
+             // 发送给其他服务器，加入到服务器所对应的发送队列中
              ArrayBlockingQueue<ByteBuffer> bq = new ArrayBlockingQueue<ByteBuffer>(SEND_CAPACITY);
              ArrayBlockingQueue<ByteBuffer> bqExisting = queueSendMap.putIfAbsent(sid, bq);
              if (bqExisting != null) {
@@ -738,6 +749,7 @@ public class QuorumCnxManager {
                             .electionAddr.toString());
                     ss.bind(addr);
                     while (!shutdown) {
+                        // 等待请求，阻塞。。。
                         Socket client = ss.accept();
                         setSockOpts(client);
                         LOG.info("Received connection request "
@@ -751,6 +763,7 @@ public class QuorumCnxManager {
                         if (quorumSaslAuthEnabled) {
                             receiveConnectionAsync(client);
                         } else {
+                            // 一个socket调用一次
                             receiveConnection(client);
                         }
 
@@ -926,6 +939,7 @@ public class QuorumCnxManager {
                         ArrayBlockingQueue<ByteBuffer> bq = queueSendMap
                                 .get(sid);
                         if (bq != null) {
+                            // 从发送队列中获取数据
                             b = pollSendQueue(bq, 1000, TimeUnit.MILLISECONDS);
                         } else {
                             LOG.error("No queue of incoming messages for " +
@@ -935,6 +949,7 @@ public class QuorumCnxManager {
 
                         if(b != null){
                             lastMessageSent.put(sid, b);
+                            // 发送数据
                             send(b);
                         }
                     } catch (InterruptedException e) {
@@ -1019,6 +1034,7 @@ public class QuorumCnxManager {
                     byte[] msgArray = new byte[length];
                     din.readFully(msgArray, 0, length);
                     ByteBuffer message = ByteBuffer.wrap(msgArray);
+                    // 将接收到的数据放到recvQueue中
                     addToRecvQueue(new Message(message.duplicate(), sid));
                 }
             } catch (Exception e) {
