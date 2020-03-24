@@ -803,7 +803,7 @@ public class FastLeaderElection implements Election {
            self.start_fle = Time.currentElapsedTime();
         }
         try {
-            // 每台服务器接收到的投票，即投票箱     其他服务器sid ---> 投票
+            // 每台服务器接收到的投票，即投票箱，存储的数据格式为：其他服务器sid ---> 投票
             HashMap<Long, Vote> recvset = new HashMap<Long, Vote>();
 
             HashMap<Long, Vote> outofelection = new HashMap<Long, Vote>();
@@ -831,6 +831,7 @@ public class FastLeaderElection implements Election {
                 /*
                  * Remove next notification from queue, times out after 2 times
                  * the termination time
+                 * 获取其他服务器的投票
                  */
                 Notification n = recvqueue.poll(notTimeout,
                         TimeUnit.MILLISECONDS);
@@ -840,6 +841,8 @@ public class FastLeaderElection implements Election {
                  * Otherwise processes new notification.
                  */
                 if(n == null){
+                    // 获取到的选票是空，判断有没有需要发送的数据
+                    // 因为之前已经sendNotifications过一次(发给自己)，所以在这里发现东西没有发送出去，可能连接还没有建立
                     if(manager.haveDelivered()){
                         sendNotifications();
                     } else {
