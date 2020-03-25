@@ -101,6 +101,7 @@ public class QuorumPeerMain {
     {
         QuorumPeerConfig config = new QuorumPeerConfig();
         if (args.length == 1) {
+            // 解析配置文件，并设置相关参数
             config.parse(args[0]);
         }
 
@@ -171,6 +172,7 @@ public class QuorumPeerMain {
           quorumPeer.setQuorumCnxnThreadsSize(config.quorumCnxnThreadsSize);
           quorumPeer.initialize();
 
+          // 重要
           quorumPeer.start();
           quorumPeer.join();
       } catch (InterruptedException e) {

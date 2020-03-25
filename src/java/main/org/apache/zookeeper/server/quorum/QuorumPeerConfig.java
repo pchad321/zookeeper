@@ -237,6 +237,7 @@ public class QuorumPeerConfig {
                 if (type == LearnerType.OBSERVER){
                     observers.put(Long.valueOf(sid), new QuorumServer(sid, hostname, port, electionPort, type));
                 } else {
+                    // 只有当前服务器的类型不是observer时，才会将该服务器加入map中，map中包含的服务器才有选举的资格
                     servers.put(Long.valueOf(sid), new QuorumServer(sid, hostname, port, electionPort, type));
                 }
             } else if (key.startsWith("group")) {
@@ -394,7 +395,7 @@ public class QuorumPeerConfig {
                 /*
                  * The default QuorumVerifier is QuorumMaj
                  */
-
+                // 过半机制验证类，并且传入learner服务器的数量
                 LOG.info("Defaulting to majority quorums");
                 quorumVerifier = new QuorumMaj(servers.size());
             }
@@ -403,6 +404,7 @@ public class QuorumPeerConfig {
             // figured out
             servers.putAll(observers);
 
+            // 获取myid
             File myIdFile = new File(dataDir, "myid");
             if (!myIdFile.exists()) {
                 throw new IllegalArgumentException(myIdFile.toString()
@@ -416,6 +418,7 @@ public class QuorumPeerConfig {
                 br.close();
             }
             try {
+                // serverId就是myId
                 serverId = Long.parseLong(myIdString);
                 MDC.put("myid", myIdString);
             } catch (NumberFormatException e) {

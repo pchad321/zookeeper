@@ -333,6 +333,7 @@ public class Leader {
 
                         BufferedInputStream is = new BufferedInputStream(
                                 s.getInputStream());
+                        // 每一个socket都会开启一个LearnerHandler的线程
                         LearnerHandler fh = new LearnerHandler(s, is, Leader.this);
                         fh.start();
                     } catch (SocketException e) {
@@ -385,12 +386,14 @@ public class Leader {
 
         try {
             self.tick.set(0);
+            // 又导一次数据？？
             zk.loadData();
             
             leaderStateSummary = new StateSummary(self.getCurrentEpoch(), zk.getLastProcessedZxid());
 
             // Start thread that waits for connection requests from 
             // new followers.
+            // 开启一个线程
             cnxAcceptor = new LearnerCnxAcceptor();
             cnxAcceptor.start();
             

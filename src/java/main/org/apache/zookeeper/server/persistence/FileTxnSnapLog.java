@@ -189,6 +189,7 @@ public class FileTxnSnapLog {
      * database transactions.
      * @return the highest zxid restored.
      * @throws IOException
+     * 由于快照文件并不一定包含有最新的数据，但是事务日志里面含有最新的日志信息，所以会将这部分多出来的事务再次执行一遍
      */
     public long fastForwardFromEdits(DataTree dt, Map<Long, Integer> sessions,
                                      PlayBackListener listener) throws IOException {
@@ -213,6 +214,7 @@ public class FileTxnSnapLog {
                     highestZxid = hdr.getZxid();
                 }
                 try {
+                    // 执行事务
                     processTransaction(hdr,dt,sessions, itr.getTxn());
                 } catch(KeeperException.NoNodeException e) {
                    throw new IOException("Failed to process transaction type: " +

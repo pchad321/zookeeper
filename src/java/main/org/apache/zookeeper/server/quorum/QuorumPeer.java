@@ -632,9 +632,10 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     
     @Override
     public synchronized void start() {
-        // 从数据文件中加载数据，主要是根据事务id和epoch值来确定是第几轮选举
+        // 从快照数据文件中加载数据，并根据zxid的高32位和epoch值来确定是第几轮选举
         loadDataBase();
         // cnxnFactory默认使用NIOServerCnxnFactory，开始socket连接，并使用NIO进行数据交互
+        // 开启一个线程来接收客户端请求
         cnxnFactory.start();
         // 开始领导者选举，确定服务器的角色，再针对不同的服务器角色进行初始化(确定领导者选举算法)
         startLeaderElection();
@@ -917,6 +918,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
              * Main loop
              */
             while (running) {
+                // 获取当前服务器的状态
                 switch (getPeerState()) {
                 case LOOKING:
                     // 还在进行选举，此时server的状态为looking
@@ -970,7 +972,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                         try {
                             // 兼容性代码
                             setBCVote(null);
-                            // 查找leader(重要)
+                            // 查找leader(非常重要)
                             setCurrentVote(makeLEStrategy().lookForLeader());
                         } catch (Exception e) {
                             LOG.warn("Unexpected exception", e);
@@ -1017,6 +1019,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception",e);
                     } finally {
+                        // 如果有一半或以上的机器不可用，并且本服务器是leader，此时会将leader强行退出，并设置当前服务器为looking状态
                         if (leader != null) {
                             leader.shutdown("Forcing shutdown");
                             setLeader(null);
