@@ -876,11 +876,16 @@ public class Leader {
                 return epoch;
             }
             if (lastAcceptedEpoch >= epoch) {
+                // 取出最大的一届选举序号，并+1
                 epoch = lastAcceptedEpoch+1;
             }
+
+            // 判断当前连接进来的服务器是否是follower
             if (isParticipant(sid)) {
                 connectingFollowers.add(sid);
             }
+
+            // leader确定了epoch值后，还需要集群中超过半数服务器的同意
             QuorumVerifier verifier = self.getQuorumVerifier();
             if (connectingFollowers.contains(self.getId()) && 
                                             verifier.containsQuorum(connectingFollowers)) {

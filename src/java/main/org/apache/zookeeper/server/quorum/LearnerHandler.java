@@ -355,6 +355,7 @@ public class LearnerHandler extends ZooKeeperThread {
             long peerLastZxid;
             StateSummary ss = null;
             long zxid = qp.getZxid();
+            // 这里的this.getSid获取的是每个learner的sid
             long newEpoch = leader.getEpochToPropose(this.getSid(), lastAcceptedEpoch);
             
             if (this.getVersion() < 0x10000) {
@@ -366,10 +367,12 @@ public class LearnerHandler extends ZooKeeperThread {
             } else {
                 byte ver[] = new byte[4];
                 ByteBuffer.wrap(ver).putInt(0x10000);
+                // 处理epoch的值，并发送给follower服务器
                 QuorumPacket newEpochPacket = new QuorumPacket(Leader.LEADERINFO, ZxidUtils.makeZxid(newEpoch, 0), ver, null);
                 oa.writeRecord(newEpochPacket, "packet");
                 bufferedOutput.flush();
                 QuorumPacket ackEpochPacket = new QuorumPacket();
+                // 读取follower返回的ack信息
                 ia.readRecord(ackEpochPacket, "packet");
                 if (ackEpochPacket.getType() != Leader.ACKEPOCH) {
                     LOG.error(ackEpochPacket.toString()
@@ -406,6 +409,7 @@ public class LearnerHandler extends ZooKeeperThread {
                 LinkedList<Proposal> proposals = leader.zk.getZKDatabase().getCommittedLog();
 
                 if (peerLastZxid == leader.zk.getZKDatabase().getDataTreeLastProcessedZxid()) {
+                    // follower的事务id和leader的事务id相同，那么就不需要进行数据同步
                     // Follower is already sync with us, send empty diff
                     LOG.info("leader and follower are in sync, zxid=0x{}",
                             Long.toHexString(peerLastZxid));
