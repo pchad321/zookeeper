@@ -113,6 +113,7 @@ public class ObserverZooKeeperServer extends LearnerZooKeeperServer {
          *
          * However, this may degrade performance as it has to write to disk
          * and do periodic snapshot which may double the memory requirements
+         * 控制observer是否需要打快照文件
          */
         if (syncRequestProcessorEnabled) {
             syncProcessor = new SyncRequestProcessor(this, null);

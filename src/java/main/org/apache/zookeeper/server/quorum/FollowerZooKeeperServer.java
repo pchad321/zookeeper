@@ -94,6 +94,7 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
         if ((request.zxid & 0xffffffffL) != 0) {
             pendingTxns.add(request);
         }
+        // 在这里follower会去持久化，如果持久化成功就会调用下一个SendAckRequestProcessor发送ack给leader
         syncProcessor.processRequest(request);
     }
 

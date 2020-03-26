@@ -495,6 +495,7 @@ public class LearnerHandler extends ZooKeeperThread {
             }
             bufferedOutput.flush();
             //Need to set the zxidToSend to the latest zxid
+            // 如果发送快照给learner，那么就需要将快照的最大zxid发送出去
             if (packetToSend == Leader.SNAP) {
                 zxidToSend = leader.zk.getZKDatabase().getDataTreeLastProcessedZxid();
             }
@@ -510,6 +511,7 @@ public class LearnerHandler extends ZooKeeperThread {
                         + "sent zxid of db as 0x" 
                         + Long.toHexString(zxidToSend));
                 // Dump data to peer
+                // 序列化快照数据并发送出去
                 leader.zk.getZKDatabase().serializeSnapshot(oa);
                 oa.writeString("BenWasHere", "signature");
             }
@@ -521,6 +523,7 @@ public class LearnerHandler extends ZooKeeperThread {
                     Thread.currentThread().setName(
                             "Sender-" + sock.getRemoteSocketAddress());
                     try {
+                        // 发送数据
                         sendPackets();
                     } catch (InterruptedException e) {
                         LOG.warn("Unexpected interruption",e);
@@ -558,7 +561,7 @@ public class LearnerHandler extends ZooKeeperThread {
             // Mutation packets will be queued during the serialize,
             // so we need to mark when the peer can actually start
             // using the data
-            //
+            // 只有将UPTODATE发送给follower时，follower才会开始同步数据
             queuedPackets.add(new QuorumPacket(Leader.UPTODATE, -1, null, null));
 
             while (true) {

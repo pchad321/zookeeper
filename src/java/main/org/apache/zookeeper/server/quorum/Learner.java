@@ -436,6 +436,7 @@ public class Learner {
                     }
                     break;
                 case Leader.UPTODATE:
+                    // 只有在这里才能跳出循环，即接收到leader发送UPTODATE的消息
                     if (isPreZAB1_0) {
                         zk.takeSnapshot();
                         self.setCurrentEpoch(newEpoch);
@@ -490,6 +491,7 @@ public class Learner {
                 fzk.logRequest(p.hdr, p.rec);
             }
             for(Long zxid: packetsCommitted) {
+                // 开始提交数据
                 fzk.commit(zxid);
             }
         } else if (zk instanceof ObserverZooKeeperServer) {

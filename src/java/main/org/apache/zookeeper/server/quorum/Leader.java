@@ -438,7 +438,8 @@ public class Leader {
                 self.tick.incrementAndGet();
                 return;
             }
-            
+
+            // 开启服务器，并初始化RequestProcessor
             startZkServer();
             
             /**
@@ -973,6 +974,7 @@ public class Leader {
                 + getSidSetString(newLeaderProposal.ackSet)
                 + " ]; starting up and setting last processed zxid: 0x{}",
                 Long.toHexString(zk.getZxid()));
+        // 这里的zk是LeaderZooKeeperServer，所以最终会调用LeaderZooKeeperServer的setupRequestProcessors方法
         zk.startup();
         /*
          * Update the election vote here to ensure that all members of the

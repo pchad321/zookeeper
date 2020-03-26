@@ -75,6 +75,7 @@ public class ProposalRequestProcessor implements RequestProcessor {
             if (request.hdr != null) {
                 // We need to sync and get consensus on any transactions
                 try {
+                    // 开始二阶段投票
                     zks.getLeader().propose(request);
                 } catch (XidRolloverException e) {
                     throw new RequestProcessorException(e.getMessage(), e);
