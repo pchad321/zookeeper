@@ -419,6 +419,7 @@ public class LearnerHandler extends ZooKeeperThread {
                     LOG.debug("proposal size is {}", proposals.size());
                     if ((maxCommittedLog >= peerLastZxid)
                             && (minCommittedLog <= peerLastZxid)) {
+                        // 说明learner服务器的事务id在leader服务器事务日志最小和最大值之间，此时只需要同步事务id到最大值之间的数据
                         LOG.debug("Sending proposals to follower");
 
                         // as we look through proposals, this variable keeps track of previous
@@ -454,6 +455,7 @@ public class LearnerHandler extends ZooKeeperThread {
                                         updates = zxidToSend;
                                     }
                                 }
+                                // 添加到queuedPackets队列中
                                 queuePacket(propose.packet);
                                 QuorumPacket qcommit = new QuorumPacket(Leader.COMMIT, propose.packet.getZxid(),
                                         null, null);
@@ -461,6 +463,7 @@ public class LearnerHandler extends ZooKeeperThread {
                             }
                         }
                     } else if (peerLastZxid > maxCommittedLog) {
+                        // follower的事务id比leader的最大的事务id还要大，此时follower需要将这部分多余的数据回滚
                         LOG.debug("Sending TRUNC to follower zxidToSend=0x{} updates=0x{}",
                                 Long.toHexString(maxCommittedLog),
                                 Long.toHexString(updates));
