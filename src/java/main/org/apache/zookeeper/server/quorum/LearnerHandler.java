@@ -585,6 +585,7 @@ public class LearnerHandler extends ZooKeeperThread {
 
                 switch (qp.getType()) {
                 case Leader.ACK:
+                    // 处理learner发送过来的ack信息
                     if (this.learnerType == LearnerType.OBSERVER) {
                         if (LOG.isDebugEnabled()) {
                             LOG.debug("Received ACK from Observer  " + this.sid);

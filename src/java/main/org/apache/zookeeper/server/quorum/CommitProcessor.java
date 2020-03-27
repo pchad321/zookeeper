@@ -74,12 +74,14 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
             while (!finished) {
                 int len = toProcess.size();
                 for (int i = 0; i < len; i++) {
+                    // 如果可以提交，那么就会交给下一个请求处理器处理
                     nextProcessor.processRequest(toProcess.get(i));
                 }
                 toProcess.clear();
                 synchronized (this) {
                     if ((queuedRequests.size() == 0 || nextPending != null)
                             && committedRequests.size() == 0) {
+                        // 如果不能提交，则会在此处等待过半机制的验证
                         wait();
                         continue;
                     }

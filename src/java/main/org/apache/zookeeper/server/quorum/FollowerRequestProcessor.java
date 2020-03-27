@@ -87,6 +87,7 @@ public class FollowerRequestProcessor extends ZooKeeperCriticalThread implements
                 case OpCode.createSession:
                 case OpCode.closeSession:
                 case OpCode.multi:
+                    // 对于事务请求，follower需要转发给leader进行操作
                     zks.getFollower().request(request);
                     break;
                 }
